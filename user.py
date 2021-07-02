@@ -16,10 +16,6 @@ im_width = 250
 batch_size = 256
 epochs = 10
 
-# 创建保存模型的文件夹
-if not os.path.exists("save_weights"):
-    os.makedirs("save_weights")
-
 image_path = "./data/"  # 猫狗数据集路径
 train_dir = "./data/train"  # 训练集路径
 validation_dir = "./data/test1"  # 验证集路径
