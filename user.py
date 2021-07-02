@@ -21,7 +21,7 @@ train_dir = "./data/train"  # 训练集路径
 validation_dir = "./data/test1"  # 验证集路径
 
 # 定义训练集图像生成器，并进行图像增强
-# ImageDataGenerator通过实时数据
+# ImageDataGenerator通过实时数据产生一系列的旋转、平移、剪切、反转等变换过的图像
 train_image_generator = ImageDataGenerator(rescale=1. / 255,  # 归一化
                                            rotation_range=40,  # 旋转范围
                                            width_shift_range=0.2,  # 水平平移范围
