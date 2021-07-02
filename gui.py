@@ -125,7 +125,7 @@ def start():
     result = np.squeeze(model.predict(img1))
     predict_class = np.argmax(result)
     print(inverse_dict[int(predict_class)], result[predict_class])
-    w = tkinter.Label(top, text="图像为："+str(inverse_dict[int(predict_class)])+"的概率是"+str(result[predict_class])[:4]+'%')
+    w = tkinter.Label(top, text="图像为："+str(inverse_dict[int(predict_class)])+"的概率是"+str(result[predict_class]*100)[:4]+'%')
     w.place(x=430, y=150)
 
 submit_button = tkinter.Button(top, text="选择文件", command=choose_fiel)
