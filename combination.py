@@ -10,10 +10,10 @@ import itertools
 import json
 import os
 
-# 设置图片的高和宽，一次训练所选取的样本数，迭代次数
+# 设置图片的高和宽
 im_height = 250
 im_width = 250
-#
+# 一次训练所选取的样本数，迭代次数
 batch_size = 256
 epochs = 10
 
@@ -58,28 +58,49 @@ val_data_gen = validation_image_generator.flow_from_directory(directory=validati
 # 验证集样本数
 total_val = val_data_gen.n
 
-# 使用tf.keras.applications中的DenseNet121网络，并且使用官方的预训练模型
-covn_base = tf.keras.applications.DenseNet121(weights='imagenet', include_top=False, input_shape=(250, 250, 3))
+# 理论上讲CNN越深则效果越好，但是会面临梯度弥散的问题，经过层数越多，则前面的信息就会渐渐减弱和消散。
+# 此处使用tf.keras.applications中的DenseNet121网络，并且使用官方的预训练模型
+covn_base = tf.keras.applications.DenseNet121(
+    weights='imagenet',  # 表示使用官方预训练的权值
+    include_top=False,  # 不包含顶层的全连接层
+    input_shape=(250, 250, 3)  # 输入尺寸元组，长 宽 250，3通道
+)
+
+# 表明这个模型是可训练的
 covn_base.trainable = True
 
 # 冻结前面的层，训练最后5层
 for layers in covn_base.layers[:-5]:
     layers.trainable = False
 
-# 构建模型
+# 构建序贯模型，序贯模型是函数式模型的简略版，为最简单的线性、从头到尾的结构顺序，不分叉。
+# Sequential方法的返回值可以认为是一种容器，这个容器封装了一个神经网络结构。
 model = tf.keras.Sequential()
+
+# 在模型中添加DenseNet121网络预训练模型
 model.add(covn_base)
-model.add(tf.keras.layers.GlobalAveragePooling2D())  # 加入全局平均池化层
-model.add(tf.keras.layers.Dense(512, activation='relu'))  # 添加全连接层
-model.add(tf.keras.layers.Dropout(rate=0.5))  # 添加Dropout层，防止过拟合
-model.add(tf.keras.layers.Dense(2, activation='softmax'))  # 添加输出层(2分类)
+
+# 加入全局平均池化层，这是用卷积提取特征的最后一步
+# 输入(batch_size, rows, cols, channels)
+# 输出(batch_size, channels)
+model.add(tf.keras.layers.GlobalAveragePooling2D())
+
+# 添加全连接层
+model.add(tf.keras.layers.Dense(512, activation='relu'))
+
+# 添加Dropout层，防止过拟合
+model.add(tf.keras.layers.Dropout(rate=0.5))
+
+# 添加输出层(2分类)，且一张图片只会有一个标签，要么是猫要么是狗，所以激活函数使用softmax
+# 若一张图片既可以是人物照也可以是风景照的多标签分类，使用sigmoid会更合适
+model.add(tf.keras.layers.Dense(2, activation='softmax'))
+
 model.summary()  # 打印每层参数信息
 
 # 编译模型
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),  # 使用adam优化器，学习率为0.0001
               loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False),  # 交叉熵损失函数
               metrics=["accuracy"])  # 评价函数
-
 
 # 回调函数1:学习率衰减
 reduce_lr = ReduceLROnPlateau(
@@ -180,12 +201,11 @@ confusion_mtx = confusion_matrix(y_true=val_data_gen.classes, y_pred=Y_pred_clas
 # 绘制混淆矩阵
 plot_confusion_matrix(confusion_mtx, normalize=True, target_names=labels)
 
-
-#获取数据集的类别编码
+# 获取数据集的类别编码
 class_indices = train_data_gen.class_indices
-#将编码和对应的类别存入字典
+# 将编码和对应的类别存入字典
 inverse_dict = dict((val, key) for key, val in class_indices.items())
-#加载测试图片
+# 加载测试图片
 img = Image.open("./data/test/9.jpg")
 # 将图片resize到224x224大小
 img = img.resize((im_width, im_height))
@@ -193,11 +213,11 @@ img = img.resize((im_width, im_height))
 img1 = np.array(img) / 255.
 # 将图片增加一个维度，目的是匹配网络模型
 img1 = (np.expand_dims(img1, 0))
-#将预测结果转化为概率值
+# 将预测结果转化为概率值
 result = np.squeeze(model.predict(img1))
 predict_class = np.argmax(result)
-print(inverse_dict[int(predict_class)],result[predict_class])
-#将预测的结果打印在图片上面
-plt.title([inverse_dict[int(predict_class)],result[predict_class]])
-#显示图片
+print(inverse_dict[int(predict_class)], result[predict_class])
+# 将预测的结果打印在图片上面
+plt.title([inverse_dict[int(predict_class)], result[predict_class]])
+# 显示图片
 plt.imshow(img)
